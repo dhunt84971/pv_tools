@@ -6,7 +6,7 @@ Command line tool for interrogating the exported displays from a PanelView appli
 ```dotnet run <command> [<additional arguments>]```
 
 ## Commands:
-    ```getTouchCells <display folder> [<output file>]```
+    getTouchCells <display folder> [<output file>]
 
 ## GETTOUCHCELLS -
 This command returns a list of touchcell usage for each display.
