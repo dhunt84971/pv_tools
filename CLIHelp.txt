@@ -1,0 +1,18 @@
+No command line arguments found.
+
+Typical Usage:
+dotnet run <command> [<additional arguments>]
+
+Commands:
+    getTouchCells <display folder>
+
+GETTOUCHCELLS -
+This command returns a list of touchcell usage for each display.
+
+Usage:
+dotnet run getTouchCells <display folder>
+
+Examples:
+dotnet run getTouchCells "/home/dave/AppendOC/Jobs/2022/ES2232 - ACI - B38 Process Glycol/HMI"
+
+
