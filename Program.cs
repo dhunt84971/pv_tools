@@ -250,7 +250,7 @@ namespace pv_tools
                     fileEntries = fileEntries_Popups.ToList();
                 else
                     throw new ArgumentOutOfRangeException(
-                        "Invalid displayType.  Must be all, screens or popups."
+                        "Invalid displayType.  Must be one of - (all, screens, popups)."
                     );
 
                 foreach(string fileName in fileEntries){
