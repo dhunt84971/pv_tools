@@ -37,6 +37,14 @@ namespace pv_tools
                         else
                             getTouchCells(args[1]);
                         break;
+                    case "getnavigation":
+                        if (args.Length > 3)
+                            getNavigation(args[1], args[2], args[3]);
+                        else if (args.Length > 2)
+                            getNavigation(args[1], args[2]);
+                        else
+                            getNavigation(args[1]);
+                        break;
                     default:
                         showHelp(args);
                         break;
@@ -49,10 +57,24 @@ namespace pv_tools
 
         #region COMMAND LINE COMMANDS
 
-        static void getTouchCells(string args, string outfile = "", bool recurs = false)
+        /// <summary>
+        /// getTouchCells is a recursive function that reports on the touchcell usage for each exported
+        /// display in the display folder.  TouchCells include any pushbuttons and numeric input objects.
+        ///
+        /// If an output file argument is specified the function will create the output file and save the
+        /// touchcell usage information in CSV format to the file.  Otherwise output will be directed to the
+        /// console. NOTE: The specified output file will be deleted if it already exists.
+        /// 
+        /// The recurs argument is internal to the function and should not be assigned by the calling
+        /// function.
+        /// </summary>
+        /// <param name="displayFolder"></param>
+        /// <param name="outfile"></param>
+        /// <param name="recurs"></param>
+        static void getTouchCells(string displayFolder, string outfile = "", bool recurs = false)
         {
             string outfilepath = "";
-            string sourcef = getFullPath(args, appPath);
+            string sourcef = getFullPath(displayFolder, appPath);
             bool outToFile = outfile != "";
             string outText = "";
 
@@ -115,6 +137,7 @@ namespace pv_tools
                             description = node.Attributes["name"].Value.ToString().Trim();
                         }
                     }
+                    
                     // momentaryButton specifics
                     if (node.Name == "momentaryButton"){
                         functionType = "Momentary Pushbutton";
@@ -180,6 +203,94 @@ namespace pv_tools
             }
         }
 
+        /// <summary>
+        /// getNavigation generates a display navigation matrix in CSV format from the exported displays
+        /// found in the specified display folder.  Output is directed to the console by default.  Specify
+        /// an output file argument to save the data to a CSV file.
+        /// </summary>
+        /// <param name="displayFolder"></param>
+        /// <param name="outfile"></param>
+        static void getNavigation(string displayFolder, string displayType = "all", string outfile = "")
+        {
+            string outfilepath = "";
+            string sourcef = getFullPath(displayFolder, appPath);
+            bool outToFile = outfile != "";
+            string outText = "";
+            IList<string> displays = new List<string>();
+
+            if (outToFile) outfilepath = getFullPath(outfile, appPath);
+
+            // Delete the output file on the first pass if it already exists.
+            if (outToFile && File.Exists(outfilepath)){
+                File.Delete(outfilepath);
+            }
+
+            if (Directory.Exists(sourcef))
+            {
+                // Get the list of displays.
+                IList<string> fileEntries = new List<string>(Directory.GetFiles(sourcef, "*.xml"));
+
+                // Generate two separate lists of screens and popups.
+                IList<string> fileEntries_Screens = new List<string>();
+                IList<string> fileEntries_Popups = new List<string>();
+                
+                foreach (string fileName in fileEntries)
+                {
+                    bool isPopup = cXMLFunctions.GetXMLAttribute(fileName, "//displaySettings", "displayType") == "onTop";
+                    if (isPopup)
+                        fileEntries_Popups.Add(fileName);
+                    else
+                        fileEntries_Screens.Add(fileName);
+                }
+                if (displayType.ToLower() == "all")
+                    fileEntries = ConcatIList(fileEntries_Screens, fileEntries_Popups);
+                else if (displayType.ToLower() == "screens")
+                    fileEntries = fileEntries_Screens.ToList();
+                else if (displayType.ToLower() == "popups")
+                    fileEntries = fileEntries_Popups.ToList();
+                else
+                    throw new ArgumentOutOfRangeException(
+                        "Invalid displayType.  Must be all, screens or popups."
+                    );
+
+                foreach(string fileName in fileEntries){
+                    displays.Add(getNamefromPath(fileName).RemoveSuffix(".xml"));
+                }
+                int numDisplays = displays.Count;
+                // Output the column headers.
+                outText = " ,Navigate To Screen\nCurrent Screen,";
+                int displayIndex = 0;
+                foreach (string fileName in fileEntries)
+                {
+                    bool isPopup = cXMLFunctions.GetXMLAttribute(fileName, "//displaySettings", "displayType") == "onTop";
+                    // If this is a popup, copy it to the end of the list.
+                    outText += (isPopup)? displays[displayIndex] + " (PU) ," : displays[displayIndex] + ",";
+                    displayIndex++;
+                }
+                appendFile(outfilepath, outText, outToFile);
+
+                // Fill in the rest of the table.
+                displayIndex = 0;
+                foreach (string fileName in fileEntries)
+                {
+                    bool isPopup = cXMLFunctions.GetXMLAttribute(fileName, "//displaySettings", "displayType") == "onTop";
+                    outText = (isPopup)? displays[displayIndex] + " (PU) ," : displays[displayIndex] + ",";
+                    foreach (string display in displays)
+                    {
+                        string xpath = String.Format("//gotoButton[@display='{0}']", display);
+                        XmlNodeList nodes = cXMLFunctions.GetXMLNodes(fileName, xpath);
+                        outText += (nodes.Count > 0) ? "X," : " ,";
+                    }
+                    appendFile(outfilepath, outText, outToFile);
+                    displayIndex++;
+                }
+            }
+            else
+            {
+                Console.WriteLine("{0} is not a valid directory.", sourcef);
+            }
+        }
+
         static void showHelp(string[] args)
         {
             string cliResponse = File.ReadAllText(string.Format("{0}/{1}", appPath, "CLIHelp.txt"));
@@ -235,6 +346,15 @@ namespace pv_tools
                 Console.WriteLine(text);
             }
             return;
+        }
+
+        static IList<string> ConcatIList(IList<string> list1, IList<string> list2){
+            IList<string> retList = new List<string>();
+            foreach(string l1 in list1)
+                retList.Add(l1);
+            foreach(string l2 in list2)
+                retList.Add(l2);
+            return retList;
         }
 
         #endregion HELPER FUNCTIONS

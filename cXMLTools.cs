@@ -8,9 +8,14 @@ namespace pv_tools
 {
     public static class cXMLFunctions
     {
-        public static void DeleteNode(XmlDocument docXML, XmlNode removeNode)
+        /// <summary>
+        /// Deletes the specified node from the xml document.
+        /// If node is null or not found no action is taken.
+        /// </summary>
+        /// <param name="removeNode"></param>
+        public static void DeleteNode(XmlNode removeNode)
         {
-            if (removeNode != null)
+            if (removeNode != null  && removeNode.ParentNode != null)
             {
                 removeNode.ParentNode.RemoveChild(removeNode);
             }
@@ -18,12 +23,15 @@ namespace pv_tools
 
         public static void DeleteNode(XmlDocument docXML, string xpath)
         {
-            XmlElement delElement = docXML.DocumentElement;
-            XmlNode removeNode = delElement.SelectSingleNode(xpath);
+            if (docXML == null || docXML.DocumentElement == null) throw new ArgumentNullException(
+                "XML document is null.", nameof(docXML)
+            );
 
-            if (removeNode != null)
-            {
-                removeNode.ParentNode.RemoveChild(removeNode);
+            XmlElement delElement = docXML.DocumentElement;
+
+            if (delElement.SelectSingleNode(xpath) != null){
+                XmlNode removeNode = delElement.SelectSingleNode(xpath);
+                DeleteNode(removeNode);
             }
         }
 
