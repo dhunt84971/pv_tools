@@ -79,7 +79,7 @@ namespace pv_tools
             string outText = "";
 
             if (outToFile) outfilepath = getFullPath(outfile, appPath);
-
+            
             // Delete the output file on the first pass if it already exists.
             if (!recurs && outToFile && File.Exists(outfilepath)){
                 File.Delete(outfilepath);
@@ -94,7 +94,7 @@ namespace pv_tools
                 appendFile(outfilepath, outText, outToFile);
 
                 
-                string xpath = @"//gotoButton|//logoutButton|//loginButton|//momentaryButton|//maintainedButton|//numericInputCursorPoint";
+                string xpath = @"//gotoButton|//logoutButton|//loginButton|//momentaryButton|//maintainedButton|//numericInputCursorPoint|//numericInputEnable|//interlockedButton";
                 XmlNodeList nodes = cXMLFunctions.GetXMLNodes(sourcef, xpath);
                 int cellNum = 0;
                 appendFile(outfilepath, 
@@ -138,6 +138,16 @@ namespace pv_tools
                         }
                     }
                     
+                    // numericInputEnable specifics
+                    if (node.Name == "numericInputEnable"){
+                        functionType = "Numeric Input";
+                        rmin = node.Attributes["minValue"].Value.ToString();
+                        rmax = node.Attributes["maxValue"].Value.ToString();
+                        if (description == "[no caption]"){
+                            description = node.Attributes["name"].Value.ToString().Trim();
+                        }
+                    }
+                    
                     // momentaryButton specifics
                     if (node.Name == "momentaryButton"){
                         functionType = "Momentary Pushbutton";
@@ -157,12 +167,32 @@ namespace pv_tools
                             }
                         }
                     }
+                    
                     // maintainedButton specifics
                     if (node.Name == "maintainedButton"){
                         functionType = "Maintained Pushbutton";
                         string buttonName = node.Attributes["name"].Value.ToString().Trim();
                         XmlNodeList captions = cXMLFunctions.GetXMLNodes(
                             sourcef, String.Format("//maintainedButton[@name='{0}']//states//state//caption", buttonName)
+                        );
+                        description = "";
+                        bool firstPass = true;
+                        foreach (XmlNode caption in captions){
+                            if (!firstPass) description += " / ";
+                            string text = removeLineFeeds(caption.Attributes["caption"].Value.ToString().Trim());
+                            if (text != "Error" && text != ""){
+                                description += text;
+                                firstPass = false;
+                            }
+                        }
+                    }
+
+                    // interlockedButton specifics
+                    if (node.Name == "interlockedButton"){
+                        functionType = "Interlocked Pushbutton";
+                        string buttonName = node.Attributes["name"].Value.ToString().Trim();
+                        XmlNodeList captions = cXMLFunctions.GetXMLNodes(
+                            sourcef, String.Format("//interlockedButton[@name='{0}']//states//state//caption", buttonName)
                         );
                         description = "";
                         bool firstPass = true;
