@@ -5,6 +5,7 @@ using StringExtensionLibrary;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading;
 
 namespace pv_tools
@@ -44,6 +45,9 @@ namespace pv_tools
                             getNavigation(args[1], args[2]);
                         else
                             getNavigation(args[1]);
+                        break;
+                    case "convertslctags":
+                        convertSLCTags(args[1]);
                         break;
                     default:
                         showHelp(args);
@@ -321,6 +325,54 @@ namespace pv_tools
             }
         }
 
+        static void convertSLCTags(string displayFolder){
+            string sourcef = getFullPath(displayFolder, appPath);
+            
+            if(File.Exists(sourcef))
+            {
+                string fileContents = File.ReadAllText(sourcef);
+                string pattern, replace, newFileContents;
+                
+                // Find the ::[PLC] that sometimes appears in the address and replace with just [PLC].
+                pattern = @"::\[";
+                replace = "[";
+                newFileContents = Regex.Replace(fileContents, pattern, replace);
+
+                // Find N10:12/2 and replace with N10[12].2.
+                pattern = @"([A-Za-z])(\d+):(\d+)/(\d+)";
+                replace = @"$1$2[$3].$4";
+                newFileContents = Regex.Replace(newFileContents, pattern, replace);
+
+                // Find N10:12 and replace with N10[12].
+                pattern = @"([A-Za-z])(\d+):(\d+)";
+                replace = @"$1$2[$3]";
+                newFileContents = Regex.Replace(newFileContents, pattern, replace);
+
+                // Find B3/# and replace with B3:[TRUNC(#/16)].((#-TRUNC(#/16))*16).
+                pattern = @"([A-Za-z])(\d+)/(\d+)";
+                replace = @"$1$2[$3]";
+                newFileContents = Regex.Replace(newFileContents, pattern, 
+                    m => string.Format(
+                        "{0}{1}[{2}].{3}",
+                        m.Groups[1].Value,
+                        m.Groups[2].Value,
+                        Math.Truncate(m.Groups[3].Value.ToInt32()/16.0),
+                        ((m.Groups[3].Value.ToInt32()/16.0) - 
+                            Math.Truncate(m.Groups[3].Value.ToInt32()/16.0))*16
+                    ));
+                File.WriteAllText(sourcef, newFileContents);
+            }
+            else if(Directory.Exists(sourcef))
+            {
+                string [] fileEntries = Directory.GetFiles(sourcef);
+                foreach(string fileName in fileEntries)
+                    convertSLCTags(fileName);
+            }
+            else
+            {
+                Console.WriteLine("{0} is not a valid file or directory.", sourcef);
+            }
+        }
         static void showHelp(string[] args)
         {
             string cliResponse = File.ReadAllText(string.Format("{0}/{1}", appPath, "CLIHelp.txt"));

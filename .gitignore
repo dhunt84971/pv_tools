@@ -18,3 +18,7 @@ bin/
 bin/*
 .vscode/
 .vscode/*
+SF160_Displays/
+SF160_Displays/*
+Test/
+Test/*
