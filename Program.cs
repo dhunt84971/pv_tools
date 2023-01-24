@@ -311,7 +311,8 @@ namespace pv_tools
                     outText = (isPopup)? displays[displayIndex] + " (PU) ," : displays[displayIndex] + ",";
                     foreach (string display in displays)
                     {
-                        string xpath = String.Format("//gotoButton[@display='{0}']", display);
+                        //string xpath = String.Format("//gotoButton[lower-case(@display)='{0}']", display.ToLower());  // XPATH 2.0 Syntax
+                        string xpath = String.Format("//gotoButton[translate(@display, 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz')='{0}']", display.ToLower());
                         XmlNodeList nodes = cXMLFunctions.GetXMLNodes(fileName, xpath);
                         outText += (nodes.Count > 0) ? "X," : " ,";
                     }
