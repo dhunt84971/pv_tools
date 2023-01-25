@@ -41,6 +41,5 @@ This command converts the SLC tag names found in the display XML files to matchi
 
 ### Examples:
     dotnet run convertSLCTags "/home/dave/AppendOC/Jobs/2022/ES2232 - ACI - B38 Process Glycol/HMI"
-    
-NOTE: The display type must be specified if an output file argument is to be included.
+
 
