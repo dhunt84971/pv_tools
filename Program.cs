@@ -16,6 +16,7 @@ namespace pv_tools
         const bool DEBUG = true;
 
         static string appPath = "";
+        static string displayFolderRoot = "";
 
         #region COMMAND LINE INTERFACE
         static void Main(string[] args)
@@ -33,6 +34,7 @@ namespace pv_tools
                 switch (args[0].ToLower())
                 {
                     case "gettouchcells":
+                        displayFolderRoot = args[1];
                         if (args.Length > 2)
                             getTouchCells(args[1], args[2]);
                         else
@@ -49,12 +51,17 @@ namespace pv_tools
                     case "convertslctags":
                         convertSLCTags(args[1]);
                         break;
+                    case "getdisplaysecuritycodes":
+                        if (args.Length > 2)
+                            getDisplaySecurityCodes(args[1], args[2]);
+                        else
+                            getDisplaySecurityCodes(args[1]);
+                        break;
                     default:
                         showHelp(args);
                         break;
                 }
             }
-
         }
 
         #endregion COMMAND LINE INTERFACE
@@ -98,7 +105,7 @@ namespace pv_tools
                 appendFile(outfilepath, outText, outToFile);
 
                 
-                string xpath = @"//gotoButton|//logoutButton|//loginButton|//momentaryButton|//maintainedButton|//numericInputCursorPoint|//numericInputEnable|//interlockedButton";
+                string xpath = @"//gotoButton|//logoutButton|//loginButton|//momentaryButton|//maintainedButton|//numericInputCursorPoint|//numericInputEnable|//interlockedButton|//acknowledgeAllAlarmsButton";
                 XmlNodeList nodes = cXMLFunctions.GetXMLNodes(sourcef, xpath);
                 int cellNum = 0;
                 appendFile(outfilepath, 
@@ -120,6 +127,12 @@ namespace pv_tools
                     // gotoButton specifics
                     if (node.Name == "gotoButton"){
                         functionType = "Goto Display " + node.Attributes["display"].Value.ToString().Trim();
+                        if (description == "[no caption]"){
+                            description = node.Attributes["parameterFile"].Value.ToString().Trim();
+                        }
+                        string display = node.Attributes["display"].Value.ToString().Trim();
+                        security = getScreenSecurity(displayFolderRoot, display);
+                        security = security == "*" ? "D" : "Class " + security;
                         if (description == "[no caption]"){
                             description = node.Attributes["parameterFile"].Value.ToString().Trim();
                         }
@@ -210,6 +223,16 @@ namespace pv_tools
                         }
                     }
 
+                    // acknowledgeAllAlarmsButton specifics
+                    if (node.Name == "acknowledgeAllAlarmsButton"){
+                        functionType = "Momentary Pushbutton";
+                        string buttonName = node.Attributes["name"].Value.ToString().Trim();
+                        XmlNode caption = cXMLFunctions.GetXMLNode(
+                            sourcef, String.Format("//acknowledgeAllAlarmsButton[@name='{0}']//caption", buttonName)
+                        );
+                        description = removeLineFeeds(caption.Attributes["caption"].Value.ToString().Trim());
+                    }
+
                     // check for security visibility
                     string visibility = cXMLFunctions.GetXMLAttribute(node, ".//animateVisibility", "expression");
                     if (visibility != ""){
@@ -235,6 +258,63 @@ namespace pv_tools
             {
                 Console.WriteLine("{0} is not a valid file or directory.", sourcef);
             }
+        }
+
+        static void getDisplaySecurityCodes(string displayFolder, string outfile = ""){
+            string sourcef = getFullPath(displayFolder, appPath);
+            string securityCode = "*";
+            string displayName = "";
+
+            string outfilepath = "";
+            bool outToFile = outfile != "";
+            string outText = "";
+
+            if (outToFile){
+                outfilepath = getFullPath(outfile, appPath);
+                // Delete the output file on the first pass if it already exists.
+                if (File.Exists(outfilepath)){
+                    File.Delete(outfilepath);
+                }
+            }
+            
+            outText = String.Format("Security codes required for displays.");
+            appendFile(outfilepath, outText, outToFile);
+            appendFile(outfilepath, "Display Name, Security Code", outToFile);
+            if(Directory.Exists(sourcef)){
+                string [] fileEntries = Directory.GetFiles(sourcef);
+                foreach(string fileName in fileEntries){
+                    securityCode = cXMLFunctions.GetXMLAttribute(fileName, "//displaySettings", "securityCode");
+                    displayName = getNamefromPath(fileName).RemoveSuffix(".xml");
+                    outText = String.Format("{0}, {1}", displayName, securityCode);
+                    appendFile(outfilepath, outText, outToFile);
+                } 
+            }
+            else{
+                Console.WriteLine("{0} is not a valid file or directory.", sourcef);
+            }
+        }
+
+        static string getScreenSecurity(string displayFolder, string displayName)
+        {
+            // This function is terribly inefficient, but whatever.  Fix it if you don't like it.
+            string sourcef = getFullPath(displayFolder, appPath);
+            string securityCode = "*";
+            IList<string> displays = new List<string>();
+            if (Directory.Exists(sourcef))
+            {
+                // Get the list of displays.
+                IList<string> fileEntries = new List<string>(Directory.GetFiles(sourcef, "*.xml"));
+                
+                foreach (string fileName in fileEntries)
+                {
+                    securityCode = cXMLFunctions.GetXMLAttribute(fileName, "//displaySettings", "securityCode");
+                    if (getNamefromPath(fileName).RemoveSuffix(".xml") == displayName){
+                        return securityCode;
+                    }
+                }
+                return securityCode;
+            }
+            return securityCode;
         }
 
         /// <summary>
