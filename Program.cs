@@ -342,7 +342,7 @@ namespace pv_tools
             if (Directory.Exists(sourcef))
             {
                 // Get the list of displays.
-                IList<string> fileEntries = new List<string>(Directory.GetFiles(sourcef, "*.xml"));
+                IList<string> fileEntries = new List<string>(Directory.GetFiles(sourcef, "*.xml").OrderBy(x => x));
 
                 // Generate two separate lists of screens and popups.
                 IList<string> fileEntries_Screens = new List<string>();
