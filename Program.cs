@@ -7,6 +7,8 @@ using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
+using System.Security.Cryptography.X509Certificates;
+using System.ComponentModel;
 
 namespace pv_tools
 {
@@ -56,6 +58,12 @@ namespace pv_tools
                             getDisplaySecurityCodes(args[1], args[2]);
                         else
                             getDisplaySecurityCodes(args[1]);
+                        break;
+                    case "filesearchreplace":
+                        if (args.Length > 3)
+                            fileSearchReplace(args[1], args[2], args[3]=="verbose");
+                        else if (args.Length > 2)
+                            fileSearchReplace(args[1], args[2]);
                         break;
                     default:
                         showHelp(args);
@@ -448,6 +456,52 @@ namespace pv_tools
                 string [] fileEntries = Directory.GetFiles(sourcef);
                 foreach(string fileName in fileEntries)
                     convertSLCTags(fileName);
+            }
+            else
+            {
+                Console.WriteLine("{0} is not a valid file or directory.", sourcef);
+            }
+        }
+
+        static void fileSearchReplace(string srFilename, string folderFile, bool verbose = false){
+            string sourcef = getFullPath(folderFile, appPath);
+            string replacef = getFullPath(srFilename, appPath);
+
+            if(!File.Exists(replacef))
+            {
+                Console.WriteLine("{0} is not a valid file or directory.", replacef);
+                return;
+            }
+            
+            if(File.Exists(sourcef))
+            {
+                string fileContents = File.ReadAllText(sourcef);
+                string[] replaceContents = File.ReadAllLines(replacef);
+                string newFileContents = fileContents;
+
+                foreach (string replaceLine in replaceContents)
+                {
+                    if (replaceLine.Contains(","))  // Make sure the line has a comma.
+                    {
+                        string find = replaceLine.Split(",")[0].Trim();
+                        string replace = replaceLine.Split(",")[1].Trim();
+                        if (verbose)
+                        {
+                            Console.WriteLine("Replacing {0} with {1} in file {2}.", find, replace, sourcef);
+                        }
+                        if (find.Length > 0 && replace.Length > 0)
+                        {
+                            newFileContents = newFileContents.Replace(find, replace);
+                        }
+                    }
+                }
+                File.WriteAllText(sourcef, newFileContents);
+            }
+            else if(Directory.Exists(sourcef))
+            {
+                string [] fileEntries = Directory.GetFiles(sourcef);
+                foreach(string fileName in fileEntries)
+                    fileSearchReplace(srFilename, fileName, verbose);
             }
             else
             {

@@ -9,6 +9,7 @@ Command line tool for interrogating the exported displays from a PanelView appli
     getTouchCells <display folder> [<output file>]
     getNavigation <display folder> [<display type> = all] [<output file>]
     convertSLCTags <display folder>
+    fileSearchReplace <replace file> <folder> [verbose]
 
 ## GETTOUCHCELLS -
 This command returns a list of touchcell usage for each display.
@@ -41,5 +42,14 @@ This command converts the SLC tag names found in the display XML files to matchi
 
 ### Examples:
     dotnet run convertSLCTags "/home/dave/AppendOC/Jobs/2022/ES2232 - ACI - B38 Process Glycol/HMI"
+
+## FILESEARCHREPLACE -
+This command reads a file that defines items to search and replace in a list of comma separated values called the **replace file** and performs the multiple search and replacements on all the files in the specified **folder**.  The strings are converted in-place, so be sure to make a backup of the file(s) before running this command on the target folder.  All files in the target folder will be converted.
+
+### Usage:
+    dotnet run fileSearchReplace <replace file> <display folder>
+
+### Examples:
+    dotnet run fileSearchReplace replace.csv "/home/dave/AppendOC/Jobs/2022/ES2232 - ACI - B38 Process Glycol/HMI"
 
 
