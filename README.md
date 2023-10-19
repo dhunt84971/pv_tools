@@ -43,13 +43,24 @@ This command converts the SLC tag names found in the display XML files to matchi
 ### Examples:
     dotnet run convertSLCTags "/home/dave/AppendOC/Jobs/2022/ES2232 - ACI - B38 Process Glycol/HMI"
 
-## FILESEARCHREPLACE -
-This command reads a file that defines items to search and replace in a list of comma separated values called the **replace file** and performs the multiple search and replacements on all the files in the specified **folder**.  The strings are converted in-place, so be sure to make a backup of the file(s) before running this command on the target folder.  All files in the target folder will be converted.
+## FILEPREFIX -
+This command prefixes all files in the target folder with the specified prefix.  Filenames are modified in-place.  It is recommended that a copy of the folder be made before performing this command.
 
 ### Usage:
-    dotnet run fileSearchReplace <replace file> <display folder>
+    dotnet run filePrefix <folder> <prefix>
+
+### Examples:
+    dotnet run filePrefix "/home/dave/HMIDisplays1" "Cell1_"
+    dotnet run filePrefix "/home/dave/HMIDisplays2" "Cell2_"
+
+## FILESEARCHREPLACE -
+This command reads a file that defines items to search and replace in a list of comma separated values called the **replace file** and performs the multiple search and replacements on all the files in the specified **folder**.  The strings are converted in-place and in the order specified inthe **replace file**, so be sure to make a backup of the file(s) before running this command on the target folder.  All files in the target folder will be converted.  Specifying the regex option will use regular expressions in the comma separated match and substitute fields.
+
+### Usage:
+    dotnet run fileSearchReplace <replace file> <display folder> [regex] [verbose]
 
 ### Examples:
     dotnet run fileSearchReplace replace.csv "/home/dave/AppendOC/Jobs/2022/ES2232 - ACI - B38 Process Glycol/HMI"
+    dotnet run fileSearchReplace regex_replace.csv "/home/dave/AppendOC/Jobs/2022/ES2232 - ACI - B38 Process Glycol/HMI" regex
 
 

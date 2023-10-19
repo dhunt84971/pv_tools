@@ -67,6 +67,10 @@ namespace pv_tools
                         else if (args.Length > 2)
                             fileSearchReplace(args[1], args[2]);
                         break;
+                    case "fileprefix":
+                        if (args.Length > 2)
+                            filePrefix(args[1], args[2]);
+                        break;
                     default:
                         showHelp(args);
                         break;
@@ -492,7 +496,7 @@ namespace pv_tools
                         Console.WriteLine("Replacing {0} with {1} in file {2}.", find, replace, sourcef);
                     }
 
-                    if (find.Length > 0 && replace.Length > 0)
+                    if (find.Length > 0) // && replace.Length > 0) - If the replace string is empty the find strings will simply be removed.
                     {
                         if (useRegex)
                         {
@@ -530,6 +534,31 @@ namespace pv_tools
                 Console.WriteLine("{0} is not a valid file or directory.", sourcef);
             }
         }
+
+        static void filePrefix(string folderName, string prefix)
+        {
+            string sourcefolder = getFullPath(folderName, appPath);
+
+            if (!Directory.Exists(sourcefolder))
+            {
+                Console.WriteLine("{0} is not a valid directory.", sourcefolder);
+                return;
+            }
+            else
+            {
+                string[] fileEntries = Directory.GetFiles(sourcefolder);
+                    foreach (string fileName in fileEntries)
+                    {
+                        string newName = getPathfromName(fileName) + prefix + getNamefromPath(fileName);
+                        Console.WriteLine("Renaming {0} to {1}",fileName, newName);
+                        FileInfo f = new FileInfo(fileName);
+                        if (f.Exists)
+                        {
+                            f.MoveTo(newName);
+                        }
+                    }
+            }
+        }
         static void showHelp(string[] args)
         {
             string cliResponse = File.ReadAllText(string.Format("{0}/{1}", appPath, "CLIHelp.txt"));
@@ -563,6 +592,12 @@ namespace pv_tools
         static string getNamefromPath(string fName){
             string[] pathNames = fName.Split("/");
             return pathNames[pathNames.Length-1];
+        }
+
+        static string getPathfromName(string fName){
+            string[] pathNames = fName.Split("/");
+            pathNames = pathNames[..^1];
+            return String.Join("/", pathNames) + "/";
         }
 
         static void appendFile(string fName, string text, bool outToFile = true){
