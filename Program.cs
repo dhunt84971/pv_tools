@@ -60,10 +60,16 @@ namespace pv_tools
                             getDisplaySecurityCodes(args[1]);
                         break;
                     case "filesearchreplace":
-                        if (args.Length > 3)
-                            fileSearchReplace(args[1], args[2], args[3]=="verbose");
+                        if (args.Length > 4)
+                            fileSearchReplace(args[1], args[2], args[3]=="regex", args[4]=="verbose");
+                        else if (args.Length > 3)
+                            fileSearchReplace(args[1], args[2], args[3]=="regex");
                         else if (args.Length > 2)
                             fileSearchReplace(args[1], args[2]);
+                        break;
+                    case "fileprefix":
+                        if (args.Length > 2)
+                            filePrefix(args[1], args[2]);
                         break;
                     default:
                         showHelp(args);
@@ -463,17 +469,18 @@ namespace pv_tools
             }
         }
 
-        static void fileSearchReplace(string srFilename, string folderFile, bool verbose = false){
+        static void fileSearchReplace(string srFilename, string folderFile, bool useRegex = false, bool verbose = false)
+        {
             string sourcef = getFullPath(folderFile, appPath);
             string replacef = getFullPath(srFilename, appPath);
 
-            if(!File.Exists(replacef))
+            if (!File.Exists(replacef))
             {
                 Console.WriteLine("{0} is not a valid file or directory.", replacef);
                 return;
             }
-            
-            if(File.Exists(sourcef))
+
+            if (File.Exists(sourcef))
             {
                 string fileContents = File.ReadAllText(sourcef);
                 string[] replaceContents = File.ReadAllLines(replacef);
@@ -481,31 +488,75 @@ namespace pv_tools
 
                 foreach (string replaceLine in replaceContents)
                 {
-                    if (replaceLine.Contains(","))  // Make sure the line has a comma.
+                    string find = replaceLine.Split(",")[0].Trim();
+                    string replace = replaceLine.Split(",")[1].Trim();
+
+                    if (verbose)
                     {
-                        string find = replaceLine.Split(",")[0].Trim();
-                        string replace = replaceLine.Split(",")[1].Trim();
-                        if (verbose)
+                        Console.WriteLine("Replacing {0} with {1} in file {2}.", find, replace, sourcef);
+                    }
+
+                    if (find.Length > 0) // && replace.Length > 0) - If the replace string is empty the find strings will simply be removed.
+                    {
+                        if (useRegex)
                         {
-                            Console.WriteLine("Replacing {0} with {1} in file {2}.", find, replace, sourcef);
+                            Regex regex = new Regex(find);
+                            newFileContents = regex.Replace(newFileContents, replace);
                         }
-                        if (find.Length > 0 && replace.Length > 0)
+                        else
                         {
                             newFileContents = newFileContents.Replace(find, replace);
                         }
                     }
                 }
+
                 File.WriteAllText(sourcef, newFileContents);
             }
-            else if(Directory.Exists(sourcef))
+            else if (Directory.Exists(sourcef))
             {
-                string [] fileEntries = Directory.GetFiles(sourcef);
-                foreach(string fileName in fileEntries)
-                    fileSearchReplace(srFilename, fileName, verbose);
+                if (verbose)
+                {
+                    if (useRegex)
+                    {
+                        Console.WriteLine("Using regular expressions.");
+                    }
+                    else
+                    {
+                        Console.WriteLine("Using standard text search and replace.");
+                    }
+                }
+                string[] fileEntries = Directory.GetFiles(sourcef);
+                foreach (string fileName in fileEntries)
+                    fileSearchReplace(srFilename, fileName, useRegex, verbose);
             }
             else
             {
                 Console.WriteLine("{0} is not a valid file or directory.", sourcef);
+            }
+        }
+
+        static void filePrefix(string folderName, string prefix)
+        {
+            string sourcefolder = getFullPath(folderName, appPath);
+
+            if (!Directory.Exists(sourcefolder))
+            {
+                Console.WriteLine("{0} is not a valid directory.", sourcefolder);
+                return;
+            }
+            else
+            {
+                string[] fileEntries = Directory.GetFiles(sourcefolder);
+                    foreach (string fileName in fileEntries)
+                    {
+                        string newName = getPathfromName(fileName) + prefix + getNamefromPath(fileName);
+                        Console.WriteLine("Renaming {0} to {1}",fileName, newName);
+                        FileInfo f = new FileInfo(fileName);
+                        if (f.Exists)
+                        {
+                            f.MoveTo(newName);
+                        }
+                    }
             }
         }
         static void showHelp(string[] args)
@@ -541,6 +592,12 @@ namespace pv_tools
         static string getNamefromPath(string fName){
             string[] pathNames = fName.Split("/");
             return pathNames[pathNames.Length-1];
+        }
+
+        static string getPathfromName(string fName){
+            string[] pathNames = fName.Split("/");
+            pathNames = pathNames[..^1];
+            return String.Join("/", pathNames) + "/";
         }
 
         static void appendFile(string fName, string text, bool outToFile = true){
