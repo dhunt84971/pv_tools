@@ -119,11 +119,15 @@ namespace pv_tools
                 appendFile(outfilepath, outText, outToFile);
 
                 
-                string xpath = @"//gotoButton|//logoutButton|//loginButton|//momentaryButton|//maintainedButton|//numericInputCursorPoint|//numericInputEnable|//interlockedButton|//acknowledgeAllAlarmsButton";
+                //string xpath = @"//gotoButton|//logoutButton|//loginButton|//momentaryButton|//maintainedButton|//numericInputCursorPoint|//numericInputEnable|//interlockedButton|//acknowledgeAllAlarmsButton";
+                // string xpath = @"//*[ends-with(local-name(), 'Button')]"; // XPath 2.0 syntax
+                string xpath = @"//*[substring(local-name(), string-length(local-name()) - string-length('Button') + 1) = 'Button'] | ";
+                xpath += @"//*[substring(local-name(), string-length(local-name()) - string-length('Key') + 1) = 'Key']";
+
                 XmlNodeList nodes = cXMLFunctions.GetXMLNodes(sourcef, xpath);
                 int cellNum = 0;
                 appendFile(outfilepath, 
-                    "Touch Cell, Function Description, Security Level, Function Type, Range (min), Range (max)", 
+                    "Touch Cell,Function Description,Security Level,Function Type,Range (min),Range (max)", 
                     outToFile
                 );
                 foreach (XmlNode node in nodes){
@@ -134,6 +138,7 @@ namespace pv_tools
                     string security = "D";
                     string rmin = "N/A";
                     string rmax = "N/A";
+                    bool buttonFound = false;
 
                     description = removeLineFeeds(cXMLFunctions.GetXMLAttribute(node, ".//caption", "caption")).Trim();
                     if (description == "") description = "[no caption]";
@@ -150,14 +155,12 @@ namespace pv_tools
                         if (description == "[no caption]"){
                             description = node.Attributes["parameterFile"].Value.ToString().Trim();
                         }
+                        buttonFound = true;
                     }
-                    // loginButton specifics
-                    if (node.Name == "loginButton"){
-                        description = "Login";
-                    }
-                    // logoutButton specifics
-                    if (node.Name == "logoutButton"){
-                        description = "Logout";
+                    // closeButton specifics
+                    if (node.Name == "closeButton"){
+                        description = "Close Display Button";
+                        buttonFound = true;
                     }
                     // numericInputCursorPoint specifics
                     if (node.Name == "numericInputCursorPoint"){
@@ -167,6 +170,7 @@ namespace pv_tools
                         if (description == "[no caption]"){
                             description = node.Attributes["name"].Value.ToString().Trim();
                         }
+                        buttonFound = true;
                     }
                     
                     // numericInputEnable specifics
@@ -177,6 +181,7 @@ namespace pv_tools
                         if (description == "[no caption]"){
                             description = node.Attributes["name"].Value.ToString().Trim();
                         }
+                        buttonFound = true;
                     }
                     
                     // momentaryButton specifics
@@ -197,6 +202,7 @@ namespace pv_tools
                                 lastcaption = text;
                             }
                         }
+                        buttonFound = true;
                     }
                     
                     // maintainedButton specifics
@@ -216,6 +222,7 @@ namespace pv_tools
                                 firstPass = false;
                             }
                         }
+                        buttonFound = true;
                     }
 
                     // interlockedButton specifics
@@ -235,16 +242,24 @@ namespace pv_tools
                                 firstPass = false;
                             }
                         }
+                        buttonFound = true;
                     }
 
                     // acknowledgeAllAlarmsButton specifics
                     if (node.Name == "acknowledgeAllAlarmsButton"){
-                        functionType = "Momentary Pushbutton";
+                        functionType = "Acknowledge All Alarms Button";
                         string buttonName = node.Attributes["name"].Value.ToString().Trim();
                         XmlNode caption = cXMLFunctions.GetXMLNode(
                             sourcef, String.Format("//acknowledgeAllAlarmsButton[@name='{0}']//caption", buttonName)
                         );
                         description = removeLineFeeds(caption.Attributes["caption"].Value.ToString().Trim());
+                        buttonFound = true;
+                    }
+
+                    // Catch and convert all unfound button names to description text.
+                    if (!buttonFound){
+                        description = convertToSpacedString(node.Name);
+                        buttonFound = true;
                     }
 
                     // check for security visibility
@@ -254,7 +269,7 @@ namespace pv_tools
                         security = visibility;
                     }
                     
-                    outText = String.Format("{0}, {1}, {2}, {3}, {4}, {5}", 
+                    outText = String.Format("{0},{1},{2},{3},{4},{5}", 
                         cellNum, description, security, functionType, rmin, rmax
                     );
                     appendFile(outfilepath, outText, outToFile);
@@ -630,6 +645,37 @@ namespace pv_tools
                 retList.Add(l2);
             return retList;
         }
+
+        public static string convertToSpacedString(string input) 
+        // Developed by chatGpt using the prompt:
+        // Please provide a C# function that takes a string input like this "silenceAlarmsButton" and converts it to this "Silence Alarms Button".
+        {
+            if (string.IsNullOrEmpty(input))
+                return input;
+
+            StringBuilder result = new StringBuilder();
+            result.Append(Char.ToUpper(input[0]));
+
+            for (int i = 1; i < input.Length; i++)
+            {
+                if (Char.IsUpper(input[i]))
+                {
+                    // Insert a space before the uppercase letter if the previous character is not a space
+                    // and it's not uppercase (to handle acronyms properly)
+                    if (input[i - 1] != ' ' && !Char.IsUpper(input[i - 1]))
+                    {
+                        result.Append(' ');
+                    }
+                }
+                result.Append(input[i]);
+            }
+
+            // Capitalize the first character of each word
+            string finalResult = System.Globalization.CultureInfo.CurrentCulture.TextInfo.ToTitleCase(result.ToString().ToLower());
+
+            return finalResult;
+        }
+
 
         #endregion HELPER FUNCTIONS
     }
