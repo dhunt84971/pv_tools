@@ -122,7 +122,7 @@ namespace pv_tools
                 //string xpath = @"//gotoButton|//logoutButton|//loginButton|//momentaryButton|//maintainedButton|//numericInputCursorPoint|//numericInputEnable|//interlockedButton|//acknowledgeAllAlarmsButton";
                 // string xpath = @"//*[ends-with(local-name(), 'Button')]"; // XPath 2.0 syntax
                 string xpath = @"//*[substring(local-name(), string-length(local-name()) - string-length('Button') + 1) = 'Button'] | ";
-                xpath += @"//*[substring(local-name(), string-length(local-name()) - string-length('Key') + 1) = 'Key']";
+                xpath += @"//*[substring(local-name(), string-length(local-name()) - string-length('Key') + 1) = 'Key']|//numericInputCursorPoint|//numericInputEnable";
 
                 XmlNodeList nodes = cXMLFunctions.GetXMLNodes(sourcef, xpath);
                 int cellNum = 0;
@@ -258,7 +258,19 @@ namespace pv_tools
 
                     // Catch and convert all unfound button names to description text.
                     if (!buttonFound){
+                        functionType = convertToSpacedString(node.Name);
                         description = convertToSpacedString(node.Name);
+                        string buttonName = node.Attributes["name"].Value.ToString().Trim();
+                        
+                        XmlNode caption = cXMLFunctions.GetXMLNode(
+                            sourcef, String.Format("//{0}[@name='{1}']//caption", node.Name, buttonName)
+                        );
+                        if (caption != null) {
+                            string captionVal = caption.Attributes["caption"].Value.ToString().Trim();
+                            if (captionVal.Length > 0)
+                            description = removeLineFeeds(captionVal);
+                        }
+                                                
                         buttonFound = true;
                     }
 
@@ -266,6 +278,7 @@ namespace pv_tools
                     string visibility = cXMLFunctions.GetXMLAttribute(node, ".//animateVisibility", "expression");
                     if (visibility != ""){
                         visibility.Replace(",", "-");
+                        visibility.Replace(";", "-");
                         security = visibility;
                     }
                     
@@ -280,6 +293,7 @@ namespace pv_tools
             else if(Directory.Exists(sourcef))
             {
                 string [] fileEntries = Directory.GetFiles(sourcef);
+                Array.Sort(fileEntries);
                 foreach(string fileName in fileEntries)
                     getTouchCells(fileName, outfile, true);
             }
