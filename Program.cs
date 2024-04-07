@@ -9,6 +9,7 @@ using System.Text.RegularExpressions;
 using System.Threading;
 using System.Security.Cryptography.X509Certificates;
 using System.ComponentModel;
+using System.ComponentModel.DataAnnotations;
 
 namespace pv_tools
 {
@@ -385,11 +386,13 @@ namespace pv_tools
             if (Directory.Exists(sourcef))
             {
                 // Get the list of displays.
-                IList<string> fileEntries = new List<string>(Directory.GetFiles(sourcef, "*.xml").OrderBy(x => x));
-
+                //IList<string> fileEntries = new List<string>(Directory.GetFiles(sourcef, "*.xml").OrderBy(x => x));
+                List<string> fileEntries = new List<string>(Directory.GetFiles(sourcef, "*.xml"));
+                fileEntries = numericSortList(fileEntries.ToList());
+                
                 // Generate two separate lists of screens and popups.
-                IList<string> fileEntries_Screens = new List<string>();
-                IList<string> fileEntries_Popups = new List<string>();
+                List<string> fileEntries_Screens = new List<string>();
+                List<string> fileEntries_Popups = new List<string>();
                 
                 foreach (string fileName in fileEntries)
                 {
@@ -400,7 +403,7 @@ namespace pv_tools
                         fileEntries_Screens.Add(fileName);
                 }
                 if (displayType.ToLower() == "all")
-                    fileEntries = ConcatIList(fileEntries_Screens, fileEntries_Popups);
+                    fileEntries = fileEntries_Screens.Concat(fileEntries_Popups).ToList();
                 else if (displayType.ToLower() == "screens")
                     fileEntries = fileEntries_Screens.ToList();
                 else if (displayType.ToLower() == "popups")
@@ -409,9 +412,9 @@ namespace pv_tools
                     throw new ArgumentOutOfRangeException(
                         "Invalid displayType.  Must be one of - (all, screens, popups)."
                     );
-
+                
                 foreach(string fileName in fileEntries){
-                    displays.Add(getNamefromPath(fileName).RemoveSuffix(".xml"));
+                    displays.Add(getNamefromPath(fileName).RemoveSuffix(".xml").Replace(",", "-"));
                 }
                 int numDisplays = displays.Count;
                 // Output the column headers.
@@ -597,6 +600,32 @@ namespace pv_tools
         #endregion COMMAND LINE COMMANDS
 
         #region HELPER FUNCTIONS
+
+        static List<string> numericSortList(List<string> source)
+        {
+            // Prep the list of filenames.
+            // Get the path from the filenames.
+            string path = getPathfromName(source[0]);
+            // Create a new list that has the paths removed.
+            var nameList = source.Select(x => x.Replace(path,"")).ToList();
+
+            var numericList = nameList.Where(s => char.IsDigit(s[0]))
+                                    .OrderBy(s => Convert.ToInt32(s.Split(new[] { ' ', '-' }, StringSplitOptions.RemoveEmptyEntries)[0]))
+                                    .ToList();
+            
+            //numericList.ForEach(x => Console.WriteLine(x));
+
+            var alphaList = nameList.Where(s => !char.IsDigit(s[0]))
+                                .OrderBy(s => s)
+                                .ToList();
+            //alphaList.ForEach(x => Console.WriteLine(x));
+
+            
+            List<string> sortedList = numericList.Concat(alphaList).ToList();
+            sortedList = sortedList.Select(x => string.Concat(path, x)).ToList();
+
+            return sortedList;
+        }
 
         static string removeLineFeeds(string text)
         {
