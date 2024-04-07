@@ -282,9 +282,10 @@ namespace pv_tools
                         visibility.Replace(";", "-");
                         security = visibility;
                     }
-                    
+                    security = security.Replace("\n", " ");
+                    description = description.Replace("\n", " ");
                     outText = String.Format("{0},{1},{2},{3},{4},{5}", 
-                        cellNum, description, security, functionType, rmin, rmax
+                        cellNum, description.Replace(",","-"), security.Replace(",","-"), functionType, rmin, rmax
                     );
                     appendFile(outfilepath, outText, outToFile);
                 }
